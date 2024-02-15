@@ -1,2 +1,2 @@
-# TreeFileParser
-A Python library for the analysis of tree files created by RayCloudTools.
+# PyTreeFile
+A Python library for the analysis of treefiles created by [RayCloudTools](https://github.com/csiro-robotics/raycloudtools) and [TreeTools](https://github.com/csiro-robotics/treetools).
