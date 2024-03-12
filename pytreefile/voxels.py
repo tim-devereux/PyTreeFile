@@ -34,6 +34,16 @@ def write_voxels(filename, df):
 
 
 def points_mask_voxels(voxels_df, points_df):
+    """
+    Masks a voxel map with a point cloud and returns a DataFrame containing only the voxels containing points.
+    
+    Parameters:
+    voxels_df (pandas.DataFrame): The voxel map.
+    points_df (pandas.DataFrame): The point cloud.
+    
+    Returns:
+    pandas.DataFrame: A DataFrame containing only the voxels containing points.
+    """ 
     # Create an empty list to store voxels with points
     voxels_with_points = []
 
