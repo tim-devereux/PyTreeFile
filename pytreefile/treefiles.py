@@ -54,7 +54,7 @@ def treeinfo_attributes_segment(tree_file):
                 cell_data = section_data[0].strip().split(',')
                 if len(cell_data) == 7 and all(x.replace('.', '', 1).isdigit() for x in cell_data):
                     tree_id += 1
-                if len(cell_data) == 14:
+                if len(cell_data) > 7:
                     if tree_id != 0:
                         tree_ids.append(tree_id)
                     line_list.append(cell_data)
