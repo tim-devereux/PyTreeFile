@@ -1,4 +1,6 @@
 import pandas as pd 
+import numpy as np
+
 
 def treeinfo_attributes_tree(tree_file):
     """
@@ -94,10 +96,8 @@ def attributes_tree(tree_file):
     # remove duplicate rows
     df = df.drop_duplicates()
 
-
-
-
     if len(df) > 1:
         df.insert(0, 'tree_id', range(1, len(df) + 1)) 
 
     return df
+
