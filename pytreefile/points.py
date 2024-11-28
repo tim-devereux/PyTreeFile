@@ -1,5 +1,6 @@
 import pandas as pd
 
+
 def read_points(filename):
     """
     Reads a point cloud from a file and returns a DataFrame.
@@ -10,7 +11,7 @@ def read_points(filename):
     Returns:
     pandas.DataFrame: A DataFrame containing the point cloud.
     """
-    with open(filename, 'r') as file:
+    with open(filename, "r") as file:
         lines = file.readlines()
         line_list = []
         for line in lines:
@@ -28,6 +29,6 @@ def write_points(filename, df):
     filename (str): The path to the file.
     df (pandas.DataFrame): The DataFrame to write.
     """
-    with open(filename, 'w') as file:
+    with open(filename, "w") as file:
         file.write(df.to_string(index=False))
     return None

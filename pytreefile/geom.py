@@ -1,7 +1,8 @@
-import open3d as o3d 
+import open3d as o3d
 import numpy as np
 import pymeshlab
 import os
+
 
 def direction_vector(point1, point2):
     """
@@ -20,39 +21,41 @@ def direction_vector(point1, point2):
 
 
 def rotation_matrix_from_vectors(vec1, vec2):
-    """ Find the rotation matrix that aligns vec1 to vec2 
-    
+    """Find the rotation matrix that aligns vec1 to vec2
+
     Parameters:
     vec1 (numpy.ndarray): The first vector.
     vec2 (numpy.ndarray): The second vector.
-    
+
     Returns:
     numpy.ndarray: The rotation matrix.
     """
-    
-    a, b = (vec1 / np.linalg.norm(vec1)).reshape(3), (vec2 / np.linalg.norm(vec2)).reshape(3)
+
+    a, b = (vec1 / np.linalg.norm(vec1)).reshape(3), (
+        vec2 / np.linalg.norm(vec2)
+    ).reshape(3)
     v = np.cross(a, b)
     c = np.dot(a, b)
     s = np.linalg.norm(v)
     kmat = np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
 
-    rotation_matrix = np.eye(3) + kmat + kmat.dot(kmat) * ((1 - c) / (s ** 2))
+    rotation_matrix = np.eye(3) + kmat + kmat.dot(kmat) * ((1 - c) / (s**2))
     return rotation_matrix
 
 
 def count_points_in_height_bins(point_cloud_file, bin_size):
     """
     Count the number of points in each height bin of a point cloud.
-    
+
     Parameters:
     point_cloud_file (str): The path to the point cloud file.
     bin_size (float): The size of the height bins.
-    
+
     Returns:
     numpy.ndarray: An array containing the bin edges.
     numpy.ndarray: An array containing the number of points in each bin.
     """
-    
+
     # Load point cloud
     pcd = o3d.io.read_point_cloud(point_cloud_file)
 
@@ -77,7 +80,7 @@ def count_points_in_height_bins(point_cloud_file, bin_size):
 def raycast_batch(start, end, scene, x, y, z):
     """
     Perform raycasting in a batch of points.
-    
+
     Parameters:
     start (int): The start index of the batch.
     end (int): The end index of the batch.
@@ -85,38 +88,51 @@ def raycast_batch(start, end, scene, x, y, z):
     x (numpy.ndarray): The x-coordinates of the points.
     y (numpy.ndarray): The y-coordinates of the points.
     z (numpy.ndarray): The z-coordinates of the points.
-    
+
     Returns:
     numpy.ndarray: An array containing the points inside the mesh.
     """
-    batch_points = np.array([(x[i // (len(y) * len(z))], y[(i // len(z)) % len(y)], z[i % len(z)]) for i in range(start, end)])
+    batch_points = np.array(
+        [
+            (x[i // (len(y) * len(z))], y[(i // len(z)) % len(y)], z[i % len(z)])
+            for i in range(start, end)
+        ]
+    )
     query_points = o3d.core.Tensor(batch_points, dtype=o3d.core.Dtype.Float32)
-    directions = np.tile([0, 0, 1], (batch_points.shape[0], 1))  # Assuming z-direction for rays
-    rays = np.concatenate([query_points.numpy(), directions.astype(np.float32)], axis=-1)
-    intersection_counts = scene.count_intersections(o3d.core.Tensor(rays, dtype=o3d.core.Dtype.Float32)).numpy()
+    directions = np.tile(
+        [0, 0, 1], (batch_points.shape[0], 1)
+    )  # Assuming z-direction for rays
+    rays = np.concatenate(
+        [query_points.numpy(), directions.astype(np.float32)], axis=-1
+    )
+    intersection_counts = scene.count_intersections(
+        o3d.core.Tensor(rays, dtype=o3d.core.Dtype.Float32)
+    ).numpy()
     return batch_points[intersection_counts % 2 == 1]
 
 
-def compute_mesh_volume_profile(mesh_dir, voxel_size=0.05, bin_size=0.5, batch_size=10000):
+def compute_mesh_volume_profile(
+    mesh_dir, voxel_size=0.05, bin_size=0.5, batch_size=10000
+):
     """
-    Compute the volume profile of a mesh using raycasting. 
-    
+    Compute the volume profile of a mesh using raycasting.
+
     Parameters:
     mesh_dir (str): The path to the mesh file.
     voxel_size (float): The size of the voxels.
     bin_size (float): The size of the height bins.
     batch_size (int): The size of the raycasting batches.
-    
+
     Returns:
     numpy.ndarray: An array containing the bin edges.
     numpy.ndarray: An array containing the number of voxels in each bin.
-    """    
-    
-    # Here we use Pymeshlab to close the holes in the mesh, as open3d does not have a function to do this. 
+    """
+
+    # Here we use Pymeshlab to close the holes in the mesh, as open3d does not have a function to do this.
     # Create a new MeshSet
     ms = pymeshlab.MeshSet()
     ms.load_new_mesh(mesh_dir)
-    ms.apply_filter('meshing_close_holes', maxholesize=30)
+    ms.apply_filter("meshing_close_holes", maxholesize=30)
     ms.save_current_mesh(mesh_dir)
 
     # Now reload mesh into open3d to do the rest of the processing
@@ -142,8 +158,13 @@ def compute_mesh_volume_profile(mesh_dir, voxel_size=0.05, bin_size=0.5, batch_s
 
     # Perform raycasting in parallel batches
     print("Computing volume profile for mesh: {}".format(mesh_dir))
-    
-    inside_points = np.vstack([raycast_batch(i, min(i + batch_size, len(x) * len(y) * len(z))) for i in range(0, len(x) * len(y) * len(z), batch_size)])
+
+    inside_points = np.vstack(
+        [
+            raycast_batch(i, min(i + batch_size, len(x) * len(y) * len(z)))
+            for i in range(0, len(x) * len(y) * len(z), batch_size)
+        ]
+    )
 
     # Concatenate the results from all batches
     inside_points = inside_points if inside_points.size else np.array([])
@@ -171,5 +192,5 @@ def compute_mesh_volume_profile(mesh_dir, voxel_size=0.05, bin_size=0.5, batch_s
     print("Volume profile computed for mesh: {}".format(mesh_dir))
     print("Bin counts: ", bin_counts)
     print("Bin edges: ", bin_edges)
-    
+
     return np.array([bin_edges, (voxel_size * bin_counts)])
