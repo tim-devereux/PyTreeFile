@@ -2,4 +2,4 @@ pandas
 numpy
 matplotlib
 pymeshlab
-open3d
+open3d; python_version < "3.12"
