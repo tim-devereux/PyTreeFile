@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 """Convert a raycloudtools treefile into a TreeQSM-style CSV.
 
-Each output row corresponds to a non-root segment and carries:
+Each output row carries:
   - start_(x,y,z): the parent segment's tip coordinates
   - end_(x,y,z):   this segment's tip coordinates (the raw x,y,z)
   - dx, dy, dz:    normalized direction from start to end
 
-Root segments (parent_id == -1) are dropped from the output, matching the
-behavior of notebooks/TreeFile2QSM.ipynb, but their coordinates are still
-used as the start of their first children.
+Root segments (parent_id == -1) have no parent, so their start is taken as
+(x, y, z - segment_length); when segment_length is absent or 0 this collapses
+to the root point itself (a zero-length segment with a zero direction). Roots
+are kept because they carry their own per-segment attributes (e.g. volume)
+that appear nowhere else.
 
 Usage:
     python treefile2qsm.py <input.txt> [output.csv]
@@ -98,15 +100,18 @@ def convert(input_path, output_path=None, output_cols=None):
 
         for seg in segments:
             pid = int(seg[seg_idx["parent_id"]])
-            if pid == -1:
-                continue  # roots are dropped from output
-            parent = segments[pid]
-            start = (
-                parent[seg_idx["x"]],
-                parent[seg_idx["y"]],
-                parent[seg_idx["z"]],
-            )
             end = (seg[seg_idx["x"]], seg[seg_idx["y"]], seg[seg_idx["z"]])
+            if pid == -1:
+                # Root has no parent: project down by segment_length (0 if absent).
+                seg_len = seg[seg_idx["segment_length"]] if "segment_length" in seg_idx else 0.0
+                start = (end[0], end[1], end[2] - seg_len)
+            else:
+                parent = segments[pid]
+                start = (
+                    parent[seg_idx["x"]],
+                    parent[seg_idx["y"]],
+                    parent[seg_idx["z"]],
+                )
             dvec = normalized_direction(start, end)
 
             row = {name: seg[seg_idx[name]] for name in seg_cols}
@@ -117,7 +122,7 @@ def convert(input_path, output_path=None, output_cols=None):
             rows.append(row)
 
     if not rows:
-        raise ValueError("No non-root segments found.")
+        raise ValueError("No segments found.")
 
     cols = [c for c in output_cols if c in rows[0]]
     with output_path.open("w", newline="") as f:
